@@ -373,33 +373,42 @@ function toCode(v){v=(''+(v||'')).toLowerCase().trim();if(v==='ok')return'ok';if
 function contratoToRow(c){var o={};['id','fornecedor','unidade','recebimento','req','temPedido','pedido','pedido2025','diaRecebimento','diaLimite','vencimento','valor','forma','login','senha','telefone','email','link','obs'].forEach(function(k){o[k]=(c[k]==null?'':c[k])});MES.forEach(function(m){o[m]=c.meses[m]||''});return o}
 function rowToContrato(o){var m={};MES.forEach(function(k){m[k]=toCode(o[k])});return{id:o.id||uid(),fornecedor:o.fornecedor||'',unidade:o.unidade||'',recebimento:o.recebimento||'',req:o.req||'',temPedido:o.temPedido||'',pedido:o.pedido||'',pedido2025:o.pedido2025||'',diaRecebimento:o.diaRecebimento===0?'':(o.diaRecebimento||''),diaLimite:o.diaLimite===0?'':(o.diaLimite||''),vencimento:o.vencimento===0?'':(o.vencimento||''),valor:parseNum(o.valor),forma:o.forma||'',meses:m,login:o.login||'',senha:o.senha||'',telefone:o.telefone||'',email:o.email||'',link:o.link||'',obs:o.obs||''}}
 function rowToLanc(o){return{id:o.id||uid(),oc:o.oc||'',fornecedor:o.fornecedor||'',valor:parseNum(o.valor),descOC:o.descOC||'',nf:o.nf||'',migo:o.migo||'',dtLanc:o.dtLanc||'',sharepoint:o.sharepoint||''}}
-function apiCall(body,cb,attempt){
+function apiUrl(params){var u=API;if(params)u+=(u.indexOf('?')>=0?'&':'?')+params;return u}
+function apiGet(sheet,cb,attempt){
   if(!remoteOn()){if(cb)cb(new Error('sem API'));return}
   attempt=attempt||1;setStatus('loading');
   var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
   var timer=ctrl?setTimeout(function(){ctrl.abort()},25000):null;
-  var opts={method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'text/plain;charset=utf-8'}};
-  if(ctrl)opts.signal=ctrl.signal;
-  fetch(API,opts).then(function(r){if(timer)clearTimeout(timer);return r.json()}).then(function(d){setStatus('ok');if(cb)cb(null,d)}).catch(function(e){if(timer)clearTimeout(timer);if(attempt<3){setTimeout(function(){apiCall(body,cb,attempt+1)},1500*attempt)}else{setStatus('err');if(cb)cb(e)}});
+  fetch(apiUrl('sheet='+encodeURIComponent(sheet)),{method:'GET',signal:ctrl?ctrl.signal:undefined})
+    .then(function(r){if(timer)clearTimeout(timer);return r.json()})
+    .then(function(d){setStatus('ok');if(cb)cb(null,d)})
+    .catch(function(e){if(timer)clearTimeout(timer);if(attempt<3){setTimeout(function(){apiGet(sheet,cb,attempt+1)},1500*attempt)}else{setStatus('err');if(cb)cb(e)}});
 }
-function pushContrato(c){if(remoteOn()&&c)apiCall({action:'save',sheet:'contratos',data:contratoToRow(c)},function(){})}
-function pushLanc(l){if(remoteOn()&&l)apiCall({action:'save',sheet:'lancamentos',data:l},function(){})}
-function removeRemote(sheet,id){if(remoteOn())apiCall({action:'delete',sheet:sheet,id:id},function(){})}
-function uploadAll(cb){apiCall({action:'saveAll',sheet:'contratos',data:contratos.map(contratoToRow)},function(){apiCall({action:'saveAll',sheet:'lancamentos',data:lancamentos.slice()},function(){if(cb)cb()})})}
+function apiWrite(body,cb){
+  if(!remoteOn()){if(cb)cb(new Error('sem API'));return}
+  setStatus('loading');
+  fetch(API,{method:'POST',mode:'no-cors',body:JSON.stringify(body),headers:{'Content-Type':'text/plain;charset=utf-8'}})
+    .then(function(){setStatus('ok');if(cb)cb(null,{ok:true})})
+    .catch(function(e){setStatus('err');if(cb)cb(e)});
+}
+function pushContrato(c){if(remoteOn()&&c)apiWrite({action:'save',sheet:'contratos',data:contratoToRow(c)})}
+function pushLanc(l){if(remoteOn()&&l)apiWrite({action:'save',sheet:'lancamentos',data:l})}
+function removeRemote(sheet,id){if(remoteOn())apiWrite({action:'delete',sheet:sheet,id:id})}
+function uploadAll(cb){apiWrite({action:'saveAll',sheet:'contratos',data:contratos.map(contratoToRow)},function(){apiWrite({action:'saveAll',sheet:'lancamentos',data:lancamentos.slice()},function(){if(cb)cb()})})}
 function afterPull(){normalizeNames();saveDB();buildPagFilters();renderAll()}
 function pull(cb){
   if(!remoteOn()){if(cb)cb();return}
-  apiCall({action:'getAll',sheet:'contratos'},function(e,d){
+  apiGet('contratos',function(e,d){
     if(e){if(cb)cb(e);return}
     if(Array.isArray(d)&&d.length){
       contratos=d.map(rowToContrato);
-      apiCall({action:'getAll',sheet:'lancamentos'},function(e2,d2){if(!e2&&Array.isArray(d2))lancamentos=d2.map(rowToLanc);afterPull();if(cb)cb()});
+      apiGet('lancamentos',function(e2,d2){if(!e2&&Array.isArray(d2))lancamentos=d2.map(rowToLanc);afterPull();if(cb)cb()});
     }else{
       uploadAll(function(){afterPull();if(cb)cb()}); /* planilha vazia: envia os dados locais */
     }
   });
 }
-function syncNow(){if(!remoteOn()){showToast('Configure a URL do Google Sheets (variável API no código)',true);return}pull(function(e){showToast(e?'Falha ao sincronizar':'Sincronizado com o Google Sheets!',!!e)})}
+function syncNow(){if(!remoteOn()){showToast('Configure a URL do Google Sheets (variável API no código)',true);return}pull(function(e){showToast(e?('Falha ao sincronizar: '+(e&&e.message||e)):'Sincronizado com o Google Sheets!',!!e)})}
 
 /* ===== navegação ===== */
 var TAB_MAP={dashboard:['Painel de Gestão'],pagamentos:['Pagamentos por Mês'],lancamentos:['Lançamentos'],acessos:['Acessos e Contatos'],individual:['Análise Individual'],relatorios:['Relatórios']};
