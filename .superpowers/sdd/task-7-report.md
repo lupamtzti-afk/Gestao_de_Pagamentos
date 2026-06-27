@@ -47,5 +47,8 @@ Removed all old-layout styles that are no longer used:
 Removed the duplicate `repClear` entry that used `fontFamily: FONTS.mono` (was around line 1653-1657).
 Kept the newer entry with `fontFamily: FONTS.body` (now lines 1781-1785).
 
+## Post-Review Fix
+Reviewer found `repChip` was missed in Change 6. Removed directly from `controle-parcelas.jsx` (line 1521–1527). File re-synced to preview app. (Production file not git-tracked; no separate commit needed.)
+
 ## Concerns
-None. All changes applied successfully. File synced to preview app and committed.
+None after fix. All 7 changes verified by reviewer.

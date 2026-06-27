@@ -11,5 +11,5 @@
 - Task 4: complete (commit 341c3cd, review clean)
 - Task 5: complete (commit c8a6f54, review clean)
 - Task 6: complete (commit 6469fb4, review clean — minor: repClear duplicated, fixed in Task 7)
-- Task 7: pending
+- Task 7: complete (commits 4038d4c..f4ee695, review clean — minor: repChip missed, fixed inline post-review)
 - Task 8: pending
