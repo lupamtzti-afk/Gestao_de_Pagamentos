@@ -10,6 +10,6 @@
 - Task 3: complete (commit 1dec5a4, review clean)
 - Task 4: complete (commit 341c3cd, review clean)
 - Task 5: complete (commit c8a6f54, review clean)
-- Task 6: pending
+- Task 6: complete (commit 6469fb4, review clean — minor: repClear duplicated, fixed in Task 7)
 - Task 7: pending
 - Task 8: pending
