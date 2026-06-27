@@ -5,7 +5,7 @@
 
 ## Tasks
 
-- Task 1: pending
+- Task 1: complete (commit 7a8ac3c, review clean)
 - Task 2: pending
 - Task 3: pending
 - Task 4: pending
