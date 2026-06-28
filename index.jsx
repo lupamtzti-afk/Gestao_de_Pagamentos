@@ -5,7 +5,7 @@ const _sbKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const supabase = (_sbUrl && _sbKey) ? createClient(_sbUrl, _sbKey) : null
 
 /* ------------------------------------------------------------------ */
-/*  Controle de Parcelas — gerenciador de gastos no cartão de crédito  */
+/*  SmartFin+ — controle de finanças pessoais                          */
 /* ------------------------------------------------------------------ */
 
 const C = {
@@ -125,27 +125,29 @@ function LoginScreen() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "linear-gradient(160deg, #8B5CF6 0%, #6D28D9 45%, #5B21B6 100%)",
+      minHeight: "100vh", background: "linear-gradient(175deg, #EDE9FE 0%, #C4B5FD 40%, #A78BFA 70%, #8B5CF6 100%)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       padding: "20px 20px 40px", position: "relative", overflow: "hidden",
     }}>
       {/* decorative circles */}
-      <div style={{ position: "absolute", top: -80, right: -80, width: 260, height: 260, borderRadius: "50%", background: "rgba(255,255,255,.08)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", top: 60, right: -40, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,.06)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: -60, right: -60, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,.18)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: 80, right: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,.12)", pointerEvents: "none" }} />
 
       {/* logo + title */}
       <div style={{ textAlign: "center", marginBottom: 28, zIndex: 1 }}>
         <div style={{
-          width: 80, height: 80, borderRadius: 22, background: "linear-gradient(135deg, #7C3AED, #4C1D95)",
+          width: 80, height: 80, borderRadius: 22, background: "linear-gradient(135deg, #7C3AED, #5B21B6)",
           display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px",
-          boxShadow: "0 8px 32px rgba(0,0,0,.3)",
+          boxShadow: "0 8px 28px rgba(91,33,182,.35)",
         }}>
-          <span style={{ fontSize: 36 }}>💳</span>
+          <span style={{ fontFamily: F, fontSize: 28, fontWeight: 800, color: "#fff", lineHeight: 1, letterSpacing: -1 }}>
+            S<span style={{ fontSize: 16, verticalAlign: "super", fontWeight: 700 }}>+</span>
+          </span>
         </div>
-        <h1 style={{ fontFamily: F, fontSize: 26, fontWeight: 800, margin: 0, color: "#fff", letterSpacing: -0.5 }}>
-          {mode === "signup" ? "Criar Conta" : mode === "reset" ? "Recuperar Senha" : <>Gestão <span style={{ color: "#C4B5FD" }}>Finance</span></>}
+        <h1 style={{ fontFamily: F, fontSize: 28, fontWeight: 800, margin: 0, color: "#1a1233", letterSpacing: -0.5 }}>
+          SmartFin<span style={{ color: "#7C3AED" }}>+</span>
         </h1>
-        <p style={{ color: "rgba(255,255,255,.75)", fontSize: 13, margin: "6px 0 0", fontFamily: F }}>
+        <p style={{ color: "#6d5fa6", fontSize: 13, margin: "6px 0 0", fontFamily: F }}>
           {mode === "signup" ? "Preencha os dados para começar" : mode === "reset" ? "Enviaremos um link ao seu e-mail" : "Controle suas finanças com inteligência."}
         </p>
       </div>
@@ -639,8 +641,8 @@ function HomeView({ cards, expenses, enrich, totals, cardTotals, cardById, onRep
       <div style={s.homeHeader}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={s.homeHeaderKicker}>controle de parcelas</div>
-            <h1 style={s.homeHeaderTitle}>Controle de Parcelas</h1>
+            <div style={s.homeHeaderKicker}>smartfin+</div>
+            <h1 style={s.homeHeaderTitle}>SmartFin+</h1>
             <div style={s.homeHeaderSub}>{monthName} {year}</div>
           </div>
           <button

@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'favicon.ico'],
       manifest: {
-        name: 'Gestão de Pagamentos',
-        short_name: 'Pagamentos',
-        description: 'Controle de parcelas, empréstimos e despesas pessoais',
+        name: 'SmartFin+',
+        short_name: 'SmartFin+',
+        description: 'Controle suas finanças com inteligência',
         theme_color: '#7C3AED',
         background_color: '#F5F3FF',
         display: 'standalone',
