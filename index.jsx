@@ -517,12 +517,20 @@ export default function App() {
           setPaid={setFinancaPaid}
         />
       )}
+      {activeTab === "account" && (
+        <AccountView
+          session={session}
+          onBack={() => setActiveTab("home")}
+        />
+      )}
 
-      <BottomNav
-        active={activeTab}
-        onChange={setActiveTab}
-        onFAB={() => cards.length ? setExpenseModal({}) : setShowCardForm(true)}
-      />
+      {activeTab !== "account" && (
+        <BottomNav
+          active={activeTab}
+          onChange={setActiveTab}
+          onFAB={() => cards.length ? setExpenseModal({}) : setShowCardForm(true)}
+        />
+      )}
 
       {showCardForm && (
         <CardForm onSave={addCard} onClose={() => setShowCardForm(false)} />
@@ -637,8 +645,8 @@ function HomeView({ session, onNavigate, onReport }) {
             </svg>
             <span style={{ position: "absolute", top: -2, right: -2, width: 8, height: 8, borderRadius: "50%", background: "#7C3AED", border: "2px solid #fff" }} />
           </div>
-          <button type="button" onClick={() => supabase.auth.signOut()}
-            title="Sair"
+          <button type="button" onClick={() => onNavigate("account")}
+            title="Minha conta"
             style={{ width: 34, height: 34, borderRadius: "50%", background: "#EDE9FE", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2">
               <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
@@ -674,6 +682,127 @@ function HomeView({ session, onNavigate, onReport }) {
     </div>
   );
 }
+function AccountView({ session, onBack }) {
+  const F = "'Poppins', sans-serif";
+  const [displayName, setDisplayName] = useState(
+    session?.user?.user_metadata?.full_name || ""
+  );
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState({ text: "", type: "" });
+
+  const email = session?.user?.email || "";
+  const initials = (displayName || email)
+    .split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "U";
+
+  const saveName = async () => {
+    if (!displayName.trim()) return;
+    setSaving(true); setMsg({ text: "", type: "" });
+    const { error } = await supabase.auth.updateUser({ data: { full_name: displayName.trim() } });
+    setSaving(false);
+    setMsg(error ? { text: error.message, type: "error" } : { text: "Nome atualizado com sucesso!", type: "success" });
+  };
+
+  const changePassword = async () => {
+    if (!newPassword) { setMsg({ text: "Digite a nova senha.", type: "error" }); return; }
+    if (newPassword !== confirmPassword) { setMsg({ text: "As senhas não coincidem.", type: "error" }); return; }
+    if (newPassword.length < 6) { setMsg({ text: "A senha deve ter pelo menos 6 caracteres.", type: "error" }); return; }
+    setSaving(true); setMsg({ text: "", type: "" });
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setSaving(false);
+    if (error) { setMsg({ text: error.message, type: "error" }); }
+    else { setMsg({ text: "Senha alterada com sucesso!", type: "success" }); setNewPassword(""); setConfirmPassword(""); }
+  };
+
+  const inputStyle = {
+    width: "100%", border: "1.5px solid #e8e4f3", borderRadius: 12,
+    padding: "12px 14px", fontSize: 14, fontFamily: F, outline: "none",
+    background: "#F7F5FF", color: "#1a1233", boxSizing: "border-box",
+  };
+  const btnPrimary = (disabled) => ({
+    background: "linear-gradient(135deg, #7C3AED, #5B21B6)", color: "#fff", border: "none",
+    borderRadius: 12, padding: "13px", fontSize: 14, fontWeight: 600, cursor: "pointer",
+    fontFamily: F, width: "100%", opacity: disabled ? 0.6 : 1, marginTop: 4,
+  });
+
+  return (
+    <div style={{ background: "#F8F6FF", minHeight: "100vh", paddingBottom: 40 }}>
+      {/* header */}
+      <div style={{ padding: "52px 20px 14px", background: "#fff", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid #f3f0ff" }}>
+        <button type="button" onClick={onBack}
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.2">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+        </button>
+        <span style={{ fontFamily: F, fontWeight: 700, fontSize: 18, color: "#1a1233" }}>Minha Conta</span>
+      </div>
+
+      <div style={{ padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* avatar */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginBottom: 4 }}>
+          <div style={{ width: 76, height: 76, borderRadius: "50%", background: "linear-gradient(135deg, #7C3AED, #5B21B6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontFamily: F, fontSize: 28, fontWeight: 700, color: "#fff" }}>{initials}</span>
+          </div>
+          <span style={{ fontFamily: F, fontSize: 13, color: "#6b7280" }}>{email}</span>
+        </div>
+
+        {/* feedback */}
+        {msg.text && (
+          <div style={{ background: msg.type === "error" ? "#fef2f2" : "#f0fdf4", border: `1px solid ${msg.type === "error" ? "#fca5a5" : "#86efac"}`, borderRadius: 10, padding: "10px 14px", fontFamily: F, fontSize: 13, color: msg.type === "error" ? "#dc2626" : "#16a34a" }}>
+            {msg.text}
+          </div>
+        )}
+
+        {/* display name */}
+        <div style={{ background: "#fff", borderRadius: 16, padding: "20px" }}>
+          <div style={{ fontFamily: F, fontWeight: 600, fontSize: 14, color: "#374151", marginBottom: 12 }}>Nome de exibição</div>
+          <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
+            placeholder="Seu nome" style={inputStyle} />
+          <button type="button" onClick={saveName} disabled={saving || !displayName.trim()}
+            style={btnPrimary(saving || !displayName.trim())}>
+            {saving ? "Salvando…" : "Salvar nome"}
+          </button>
+        </div>
+
+        {/* change password */}
+        <div style={{ background: "#fff", borderRadius: 16, padding: "20px" }}>
+          <div style={{ fontFamily: F, fontWeight: 600, fontSize: 14, color: "#374151", marginBottom: 12 }}>Alterar senha</div>
+          <div style={{ position: "relative", marginBottom: 10 }}>
+            <input type={showPw ? "text" : "password"} value={newPassword}
+              onChange={e => setNewPassword(e.target.value)} placeholder="Nova senha"
+              style={{ ...inputStyle, paddingRight: 44 }} />
+            <button type="button" onClick={() => setShowPw(p => !p)}
+              style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 0, opacity: 0.5 }}>
+              {showPw
+                ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+            </button>
+          </div>
+          <input type={showPw ? "text" : "password"} value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirmar nova senha"
+            style={{ ...inputStyle, marginBottom: 0 }} />
+          <button type="button" onClick={changePassword} disabled={saving || !newPassword}
+            style={btnPrimary(saving || !newPassword)}>
+            {saving ? "Salvando…" : "Alterar senha"}
+          </button>
+        </div>
+
+        {/* sign out */}
+        <button type="button" onClick={() => supabase.auth.signOut()}
+          style={{ background: "#fff", color: "#dc2626", border: "1.5px solid #fca5a5", borderRadius: 16, padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: F, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sair da conta
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CardsView({ cards, cardTotals, onAdd, onDelete }) {
   return (
     <div>
