@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { supabase } from './src/supabase.js'
+import { createClient } from '@supabase/supabase-js'
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL ?? '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
+)
 
 /* ------------------------------------------------------------------ */
 /*  Controle de Parcelas — gerenciador de gastos no cartão de crédito  */
