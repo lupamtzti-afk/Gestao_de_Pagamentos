@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { supabase } from './src/supabase.js'
 
 /* ------------------------------------------------------------------ */
 /*  Controle de Parcelas — gerenciador de gastos no cartão de crédito  */
@@ -41,27 +42,114 @@ const brl = (n) =>
 
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
-/* --------------------------- persistence -------------------------- */
+/* ── Supabase row mappers ───────────────────────── */
 
-const store = {
-  async get(key, fallback) {
-    try {
-      const val = localStorage.getItem(key);
-      return val !== null ? JSON.parse(val) : fallback;
-    } catch (e) {
-      return fallback;
-    }
-  },
-  async set(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {}
-  },
-};
+const fromCard = (row) => ({ id: row.id, name: row.name, color: row.color, digits: row.digits || "" })
+const fromExpense = (row) => ({
+  id: row.id, supplier: row.supplier, cardId: row.card_id,
+  total: Number(row.total), totalInstallments: row.total_installments,
+  paidInstallments: row.paid_installments, date: row.date,
+})
+const fromFinanca = (row) => ({
+  id: row.id, supplier: row.supplier, cardId: null,
+  total: Number(row.total), totalInstallments: row.total_installments,
+  paidInstallments: row.paid_installments, date: row.date,
+})
+
+/* ------------------------------ login ----------------------------- */
+
+function LoginScreen() {
+  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const submit = async () => {
+    setLoading(true); setError(""); setSuccess("");
+    const fn = mode === "login" ? supabase.auth.signInWithPassword : supabase.auth.signUp;
+    const { error: err } = await fn.call(supabase.auth, { email: email.trim(), password });
+    setLoading(false);
+    if (err) { setError(err.message); return; }
+    if (mode === "signup") setSuccess("Conta criada! Verifique seu e-mail para confirmar.");
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: `linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)`,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 24, padding: "36px 28px", width: "100%", maxWidth: 380,
+        boxShadow: "0 24px 64px rgba(0,0,0,.25)",
+      }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ fontSize: 40, marginBottom: 8 }}>💳</div>
+          <h1 style={{ fontFamily: "'Poppins', sans-serif", fontSize: 22, fontWeight: 700, margin: 0, color: "#1a1233" }}>
+            Gestão de Pagamentos
+          </h1>
+          <p style={{ color: "#6b7280", fontSize: 13, margin: "6px 0 0", fontFamily: "'Poppins', sans-serif" }}>
+            {mode === "login" ? "Entre na sua conta" : "Crie sua conta gratuita"}
+          </p>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <input
+            style={{
+              border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "12px 14px",
+              fontSize: 14, fontFamily: "'Poppins', sans-serif", outline: "none", width: "100%",
+            }}
+            type="email" placeholder="E-mail" value={email}
+            onChange={e => setEmail(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && submit()}
+          />
+          <input
+            style={{
+              border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "12px 14px",
+              fontSize: 14, fontFamily: "'Poppins', sans-serif", outline: "none", width: "100%",
+            }}
+            type="password" placeholder="Senha (mínimo 6 caracteres)" value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && submit()}
+          />
+          {error && <p style={{ color: "#ef4444", fontSize: 12, margin: 0, fontFamily: "'Poppins', sans-serif" }}>{error}</p>}
+          {success && <p style={{ color: "#10b981", fontSize: 12, margin: 0, fontFamily: "'Poppins', sans-serif" }}>{success}</p>}
+          <button
+            type="button"
+            disabled={loading || !email || !password}
+            onClick={submit}
+            style={{
+              background: "#7C3AED", color: "#fff", border: "none", borderRadius: 11,
+              padding: "13px", fontSize: 15, fontWeight: 700, cursor: "pointer",
+              fontFamily: "'Poppins', sans-serif", opacity: (loading || !email || !password) ? 0.6 : 1,
+              marginTop: 4,
+            }}
+          >
+            {loading ? "Aguarde…" : mode === "login" ? "Entrar" : "Criar conta"}
+          </button>
+        </div>
+
+        <p style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "#6b7280", fontFamily: "'Poppins', sans-serif" }}>
+          {mode === "login" ? "Não tem conta? " : "Já tem conta? "}
+          <button
+            type="button"
+            onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setSuccess(""); }}
+            style={{ background: "none", border: "none", color: "#7C3AED", fontWeight: 700, cursor: "pointer", fontFamily: "'Poppins', sans-serif", fontSize: 13 }}
+          >
+            {mode === "login" ? "Cadastre-se" : "Faça login"}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
 
 /* ------------------------------ app ------------------------------- */
 
 export default function App() {
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [cards, setCards] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [emprestimos, setEmprestimos] = useState([]);
@@ -86,103 +174,126 @@ export default function App() {
     document.head.appendChild(link);
   }, []);
 
-  // load saved data
+  // auth listener
   useEffect(() => {
-    (async () => {
-      const [c, e, emp, cas, car] = await Promise.all([
-        store.get("cp_cards", []),
-        store.get("cp_expenses", []),
-        store.get("cp_emprestimos", []),
-        store.get("cp_casa", []),
-        store.get("cp_carro", []),
-      ]);
-      setCards(c);
-      setExpenses(e);
-      setEmprestimos(emp);
-      setCasa(cas);
-      setCarro(car);
-      setLoaded(true);
-    })();
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      if (!s) { setLoaded(false); setCards([]); setExpenses([]); setEmprestimos([]); setCasa([]); setCarro([]); }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
-  // persist
+  // load data when session is available
   useEffect(() => {
-    if (loaded) store.set("cp_cards", cards);
-  }, [cards, loaded]);
-  useEffect(() => {
-    if (loaded) store.set("cp_expenses", expenses);
-  }, [expenses, loaded]);
-  useEffect(() => {
-    if (loaded) store.set("cp_emprestimos", emprestimos);
-  }, [emprestimos, loaded]);
-  useEffect(() => {
-    if (loaded) store.set("cp_casa", casa);
-  }, [casa, loaded]);
-  useEffect(() => {
-    if (loaded) store.set("cp_carro", carro);
-  }, [carro, loaded]);
+    if (!session) return;
+    const uid = session.user.id;
+    (async () => {
+      const [{ data: c }, { data: e }, { data: f }] = await Promise.all([
+        supabase.from("cards").select("*").eq("user_id", uid),
+        supabase.from("expenses").select("*").eq("user_id", uid),
+        supabase.from("financas").select("*").eq("user_id", uid),
+      ]);
+      setCards((c || []).map(fromCard));
+      setExpenses((e || []).map(fromExpense));
+      const fins = f || [];
+      setEmprestimos(fins.filter(r => r.category === "emprestimos").map(fromFinanca));
+      setCasa(fins.filter(r => r.category === "casa").map(fromFinanca));
+      setCarro(fins.filter(r => r.category === "carro").map(fromFinanca));
+      setLoaded(true);
+    })();
+  }, [session]);
 
   /* ----------------------------- actions ---------------------------- */
-  const addCard = (card) => {
-    setCards((prev) => [...prev, { id: uid(), ...card }]);
+  const addCard = async (card) => {
+    const { data, error } = await supabase.from("cards")
+      .insert({ user_id: session.user.id, name: card.name, color: card.color, digits: card.digits || null })
+      .select().single();
+    if (!error) setCards(prev => [...prev, fromCard(data)]);
     setShowCardForm(false);
   };
 
-  const deleteCard = (id) => {
+  const deleteCard = async (id) => {
     const linked = expenses.filter((e) => e.cardId === id).length;
     const msg = linked
       ? `Excluir este cartão também remove ${linked} compra(s) ligada(s) a ele. Continuar?`
       : "Excluir este cartão?";
     if (!window.confirm(msg)) return;
-    setCards((prev) => prev.filter((c) => c.id !== id));
-    setExpenses((prev) => prev.filter((e) => e.cardId !== id));
+    await supabase.from("cards").delete().eq("id", id);
+    setCards(prev => prev.filter(c => c.id !== id));
+    setExpenses(prev => prev.filter(e => e.cardId !== id));
     if (filterCard === id) setFilterCard("all");
   };
 
-  const saveExpense = (data) => {
-    if (data.id) {
-      setExpenses((prev) => prev.map((e) => (e.id === data.id ? { ...e, ...data } : e)));
+  const saveExpense = async (exp) => {
+    const row = {
+      user_id: session.user.id,
+      supplier: exp.supplier,
+      card_id: exp.cardId || null,
+      total: exp.total,
+      total_installments: exp.totalInstallments,
+      paid_installments: exp.paidInstallments,
+      date: exp.date,
+    };
+    if (exp.id) {
+      const { data } = await supabase.from("expenses").update(row).eq("id", exp.id).select().single();
+      setExpenses(prev => prev.map(e => e.id === exp.id ? fromExpense(data) : e));
     } else {
-      setExpenses((prev) => [...prev, { id: uid(), ...data }]);
+      const { data } = await supabase.from("expenses").insert(row).select().single();
+      setExpenses(prev => [...prev, fromExpense(data)]);
     }
     setExpenseModal(null);
   };
 
-  const deleteExpense = (id) =>
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  const deleteExpense = async (id) => {
+    await supabase.from("expenses").delete().eq("id", id);
+    setExpenses(prev => prev.filter(e => e.id !== id));
+  };
 
-  const setPaid = (id, paid) =>
-    setExpenses((prev) =>
-      prev.map((e) =>
-        e.id === id
-          ? { ...e, paidInstallments: Math.max(0, Math.min(e.totalInstallments, paid)) }
-          : e
-      )
-    );
+  const setPaid = async (id, n) => {
+    const exp = expenses.find(e => e.id === id);
+    if (!exp) return;
+    const paid = Math.min(exp.totalInstallments, Math.max(0, n));
+    await supabase.from("expenses").update({ paid_installments: paid }).eq("id", id);
+    setExpenses(prev => prev.map(e => e.id === id ? { ...e, paidInstallments: paid } : e));
+  };
 
-  const saveFinanca = (category, data) => {
+  const saveFinanca = async (category, data) => {
+    const row = {
+      user_id: session.user.id, category,
+      supplier: data.supplier, total: data.total,
+      total_installments: data.totalInstallments,
+      paid_installments: data.paidInstallments, date: data.date,
+    };
     const setters = { emprestimos: setEmprestimos, casa: setCasa, carro: setCarro };
-    const lists = { emprestimos, casa, carro };
-    const list = lists[category];
-    const updated = data.id ? list.map(x => x.id === data.id ? data : x) : [...list, { ...data, id: uid() }];
-    setters[category](updated);
+    if (data.id) {
+      const { data: updated } = await supabase.from("financas").update(row).eq("id", data.id).select().single();
+      setters[category](prev => prev.map(f => f.id === data.id ? fromFinanca(updated) : f));
+    } else {
+      const { data: created } = await supabase.from("financas").insert(row).select().single();
+      setters[category](prev => [...prev, fromFinanca(created)]);
+    }
     setFinancaModal(null);
   };
 
-  const deleteFinanca = (category, id) => {
+  const deleteFinanca = async (category, id) => {
     if (!window.confirm("Excluir este registro?")) return;
+    await supabase.from("financas").delete().eq("id", id);
     const setters = { emprestimos: setEmprestimos, casa: setCasa, carro: setCarro };
-    const lists = { emprestimos, casa, carro };
-    const updated = lists[category].filter(x => x.id !== id);
-    setters[category](updated);
+    setters[category](prev => prev.filter(f => f.id !== id));
   };
 
-  const setFinancaPaid = (category, id, n) => {
-    const setters = { emprestimos: setEmprestimos, casa: setCasa, carro: setCarro };
+  const setFinancaPaid = async (category, id, n) => {
     const lists = { emprestimos, casa, carro };
-    const list = lists[category];
-    const updated = list.map(x => x.id === id ? { ...x, paidInstallments: Math.min(x.totalInstallments, Math.max(0, n)) } : x);
-    setters[category](updated);
+    const item = lists[category].find(f => f.id === id);
+    if (!item) return;
+    const paid = Math.min(item.totalInstallments, Math.max(0, n));
+    await supabase.from("financas").update({ paid_installments: paid }).eq("id", id);
+    const setters = { emprestimos: setEmprestimos, casa: setCasa, carro: setCarro };
+    setters[category](prev => prev.map(f => f.id === id ? { ...f, paidInstallments: paid } : f));
   };
 
   /* --------------------------- derived data ------------------------- */
@@ -226,9 +337,29 @@ export default function App() {
   }, [expenses, enrich]);
 
   /* ------------------------------ render ---------------------------- */
+  if (authLoading) return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ color: "#fff", fontFamily: "'Poppins', sans-serif", fontSize: 16 }}>Carregando…</div>
+    </div>
+  );
+  if (!session) return <LoginScreen />;
+
   return (
     <div style={s.root} className="cp-root">
       <style>{css}</style>
+      <div style={{ position: "fixed", top: 10, right: 12, zIndex: 200 }}>
+        <button
+          type="button"
+          onClick={() => supabase.auth.signOut()}
+          style={{
+            background: "rgba(124,58,237,0.12)", border: "none", borderRadius: 20,
+            padding: "5px 12px", fontSize: 11, fontWeight: 600, color: "#7C3AED",
+            cursor: "pointer", fontFamily: "'Poppins', sans-serif",
+          }}
+        >
+          Sair
+        </button>
+      </div>
 
       {activeTab === "home" && (
         <HomeView
